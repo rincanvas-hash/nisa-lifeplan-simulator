@@ -35,5 +35,10 @@ def test_invalid_age_order_raises_error():
         simulate_assets(80, 1_000_000, 0, 0, 65, 100_000, 100_000, 90)
 
 
+def test_final_age_must_be_retirement_age_or_later():
+    with pytest.raises(ValueError, match="シミュレーション終了年齢は退職予定年齢以上"):
+        simulate_assets(55, 1_000_000, 10_000, 3, 65, 200_000, 150_000, 64)
+
+
 def test_yen_format():
     assert yen(1234567) == "1,234,567円"

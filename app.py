@@ -39,6 +39,8 @@ def simulate_assets(
         raise ValueError("現在の年齢はシミュレーション終了年齢以下にしてください。")
     if retirement_age < current_age:
         raise ValueError("退職予定年齢は現在の年齢以上にしてください。")
+    if final_age < retirement_age:
+        raise ValueError("シミュレーション終了年齢は退職予定年齢以上にしてください。")
     if annual_return_percent < -100:
         raise ValueError("想定利回りは-100%以上にしてください。")
 
@@ -119,12 +121,16 @@ def main() -> None:
         retirement_age = st.number_input("退職予定年齢", current_age, 90, 65, help="積立をやめ、老後生活費を取り崩し始める年齢です。")
         monthly_living_expenses = st.number_input("退職後の毎月の生活費（円）", 0, 2_000_000, 280_000, step=10_000, help="住居費、食費、医療費、趣味などを含めた毎月の支出見込みです。")
         monthly_pension_income = st.number_input("退職後の毎月の年金収入（円）", 0, 2_000_000, 180_000, step=10_000, help="公的年金など、退職後に毎月受け取る見込み額です。")
-        final_age = st.number_input("シミュレーション終了年齢", current_age, 110, 95, help="何歳まで資産推移を確認するかを選びます。")
+        final_age = st.number_input("シミュレーション終了年齢", retirement_age, 110, max(95, retirement_age), help="退職予定年齢以降で、何歳まで資産推移を確認するかを選びます。")
 
     if annual_return_percent >= 7:
         st.markdown('<div class="warning">想定利回りが高めです。将来の運用成果は変動するため、現実的な範囲で複数のケースを確認しましょう。</div>', unsafe_allow_html=True)
 
-    result = simulate_assets(current_age, current_assets, monthly_contribution, annual_return_percent, retirement_age, monthly_living_expenses, monthly_pension_income, final_age)
+    try:
+        result = simulate_assets(current_age, current_assets, monthly_contribution, annual_return_percent, retirement_age, monthly_living_expenses, monthly_pension_income, final_age)
+    except ValueError as error:
+        st.error(str(error))
+        st.stop()
 
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("退職時の推定資産", yen(result.assets_at_retirement))
