@@ -129,23 +129,52 @@ def apply_design() -> None:
     st.markdown(
         """
         <style>
+        html, body, .stApp { max-width: 100%; overflow-x: clip; }
         .stApp { background: linear-gradient(180deg, #f5fbff 0%, #ffffff 45%); }
-        h1, h2, h3 { color: #164e63; overflow-wrap: anywhere; word-break: keep-all; }
-        p, label, div, span { font-size: 1.05rem; line-height: 1.7; overflow-wrap: anywhere; }
-        .app-title { color: #164e63; font-size: 2.4rem; font-weight: 800; line-height: 1.25; letter-spacing: 0.01em; overflow-wrap: anywhere; word-break: keep-all; }
-        .app-subtitle { color: #0f766e; font-size: 1.15rem; font-weight: 650; line-height: 1.6; margin-top: 0.25rem; overflow-wrap: anywhere; }
-        .page-title { color: #164e63; font-size: 1.8rem; font-weight: 750; line-height: 1.35; margin: 1.4rem 0 1rem; overflow-wrap: anywhere; word-break: keep-all; }
-        [data-testid="stMetricValue"] { color: #0f766e; font-size: 1.75rem; }
-        .block-container { max-width: 980px; padding-top: 2rem; padding-bottom: 3rem; }
+        h1, h2, h3 { color: #164e63; max-width: 100%; white-space: normal; overflow-wrap: anywhere; word-break: normal; }
+        p, label, div, span { font-size: 1.05rem; line-height: 1.7; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+        .app-title {
+            color: #164e63;
+            font-size: clamp(1.8rem, 5.8vw, 2.4rem);
+            font-weight: 800;
+            line-height: 1.25;
+            letter-spacing: 0.01em;
+            max-width: 100%;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            word-break: normal;
+        }
+        .app-subtitle {
+            color: #0f766e;
+            font-size: clamp(1rem, 3.6vw, 1.15rem);
+            font-weight: 650;
+            line-height: 1.6;
+            margin-top: 0.25rem;
+            max-width: 100%;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            word-break: normal;
+        }
+        .page-title {
+            color: #164e63;
+            font-size: clamp(1.5rem, 4.8vw, 1.8rem);
+            font-weight: 750;
+            line-height: 1.35;
+            margin: 1.4rem 0 1rem;
+            max-width: 100%;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            word-break: normal;
+        }
+        [data-testid="stMetricValue"] { color: #0f766e; font-size: clamp(1.35rem, 4.8vw, 1.75rem); }
+        .block-container { max-width: 980px; padding-top: 2rem; padding-bottom: 3rem; overflow-x: clip; }
         .notice { padding: 1rem; border-radius: 0.9rem; background: #ecfeff; border: 1px solid #a5f3fc; margin: 0.75rem 0; }
         .warning { padding: 1rem; border-radius: 0.9rem; background: #fff7ed; border: 1px solid #fed7aa; margin: 0.75rem 0; }
         .step-card { padding: 1.1rem; border-radius: 1rem; background: #ffffff; border: 1px solid #dbeafe; box-shadow: 0 1px 6px rgba(15, 76, 117, 0.08); }
         @media (max-width: 640px) {
-            [data-testid="stMetricValue"] { font-size: 1.35rem; }
             .block-container { padding-left: 1rem; padding-right: 1rem; }
-            .app-title { font-size: 1.8rem; line-height: 1.3; }
-            .app-subtitle { font-size: 1rem; }
-            .page-title { font-size: 1.5rem; line-height: 1.35; }
+            .app-title { line-height: 1.3; }
+            .page-title { line-height: 1.35; }
         }
         </style>
         """,
