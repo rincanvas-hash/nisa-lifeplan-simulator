@@ -1,7 +1,11 @@
-"""50代からの老後資金かんたんシミュレーター."""
+"""50代からの未来設計シミュレーター."""
 from __future__ import annotations
 
 from dataclasses import dataclass
+
+
+APP_NAME = "50代からの未来設計シミュレーター"
+APP_SUBTITLE = "老後資金の見通しを、数字でやさしく確認"
 
 
 @dataclass(frozen=True)
@@ -126,26 +130,42 @@ def apply_design() -> None:
         """
         <style>
         .stApp { background: linear-gradient(180deg, #f5fbff 0%, #ffffff 45%); }
-        h1, h2, h3 { color: #164e63; }
-        p, label, div, span { font-size: 1.05rem; line-height: 1.7; }
+        h1, h2, h3 { color: #164e63; overflow-wrap: anywhere; word-break: keep-all; }
+        p, label, div, span { font-size: 1.05rem; line-height: 1.7; overflow-wrap: anywhere; }
+        .app-title { color: #164e63; font-size: 2.4rem; font-weight: 800; line-height: 1.25; letter-spacing: 0.01em; overflow-wrap: anywhere; word-break: keep-all; }
+        .app-subtitle { color: #0f766e; font-size: 1.15rem; font-weight: 650; line-height: 1.6; margin-top: 0.25rem; overflow-wrap: anywhere; }
+        .page-title { color: #164e63; font-size: 1.8rem; font-weight: 750; line-height: 1.35; margin: 1.4rem 0 1rem; overflow-wrap: anywhere; word-break: keep-all; }
         [data-testid="stMetricValue"] { color: #0f766e; font-size: 1.75rem; }
         .block-container { max-width: 980px; padding-top: 2rem; padding-bottom: 3rem; }
         .notice { padding: 1rem; border-radius: 0.9rem; background: #ecfeff; border: 1px solid #a5f3fc; margin: 0.75rem 0; }
         .warning { padding: 1rem; border-radius: 0.9rem; background: #fff7ed; border: 1px solid #fed7aa; margin: 0.75rem 0; }
         .step-card { padding: 1.1rem; border-radius: 1rem; background: #ffffff; border: 1px solid #dbeafe; box-shadow: 0 1px 6px rgba(15, 76, 117, 0.08); }
-        @media (max-width: 640px) { [data-testid="stMetricValue"] { font-size: 1.35rem; } .block-container { padding-left: 1rem; padding-right: 1rem; } }
+        @media (max-width: 640px) {
+            [data-testid="stMetricValue"] { font-size: 1.35rem; }
+            .block-container { padding-left: 1rem; padding-right: 1rem; }
+            .app-title { font-size: 1.8rem; line-height: 1.3; }
+            .app-subtitle { font-size: 1rem; }
+            .page-title { font-size: 1.5rem; line-height: 1.35; }
+        }
         </style>
         """,
         unsafe_allow_html=True,
     )
 
 
+def page_header(page_title: str) -> None:
+    import streamlit as st
+
+    st.markdown(f'<div class="app-title">{APP_NAME}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="app-subtitle">{APP_SUBTITLE}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="page-title">{page_title}</div>', unsafe_allow_html=True)
+
+
 def intro_page() -> None:
     import streamlit as st
 
     apply_design()
-    st.title("50代からの老後資金かんたんシミュレーター")
-    st.subheader("1. はじめに")
+    page_header("1. はじめに")
     st.markdown(
         '<div class="step-card">これからの資産がどのように変化しそうか、かんたんな条件で確認できる教育目的のシミュレーターです。</div>',
         unsafe_allow_html=True,
@@ -167,8 +187,8 @@ def input_page() -> None:
 
     set_default_inputs()
     apply_design()
-    st.title("条件を入力")
-    st.caption("2. 条件を入力して、次のページで結果を確認します。")
+    page_header("2. 条件を入力")
+    st.caption("条件を入力して、次のページで結果を確認します。")
 
     with st.form("input_form"):
         age_col1, age_col2 = st.columns(2)
@@ -221,8 +241,8 @@ def result_page() -> None:
 
     set_default_inputs()
     apply_design()
-    st.title("結果")
-    st.caption("3. 入力条件にもとづく概算結果です。")
+    page_header("3. 結果")
+    st.caption("入力条件にもとづく概算結果です。")
 
     try:
         current_assets = parse_yen_input(st.session_state.current_assets_text)
@@ -267,7 +287,7 @@ def main() -> None:
         configure_pages()
 
     st.set_page_config(
-        page_title="50代からの老後資金かんたんシミュレーター",
+        page_title=APP_NAME,
         page_icon="🌿",
         layout="wide",
     )
