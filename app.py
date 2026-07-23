@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 
 APP_NAME = "50代からの未来設計シミュレーター"
 APP_SUBTITLE = "老後資金の見通しを、数字でやさしく確認"
+CHARACTER_IMAGE_PATH = Path("assets/guide_character.png")
 
 
 @dataclass(frozen=True)
@@ -177,7 +179,9 @@ def apply_design() -> None:
             box-shadow: none;
             margin: 0.75rem 0;
             cursor: default;
+            transition: none;
         }
+        .notice:hover, .step-card:hover { box-shadow: none; transform: none; }
         .warning {
             padding: 1rem 1rem 1rem 1.15rem;
             border-radius: 0.75rem;
@@ -196,7 +200,42 @@ def apply_design() -> None:
             font-weight: 800 !important;
             margin: 1.3rem 0 1.6rem !important;
             border-radius: 0.9rem !important;
+            box-shadow: 0 12px 24px rgba(190, 24, 93, 0.24), 0 4px 8px rgba(15, 23, 42, 0.12) !important;
+            transform: translateY(0);
+            transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
         }
+        .stButton > button[kind="primary"]:hover, .stFormSubmitButton > button[kind="primary"]:hover {
+            box-shadow: 0 16px 30px rgba(190, 24, 93, 0.32), 0 7px 12px rgba(15, 23, 42, 0.16) !important;
+            transform: translateY(-2px);
+            filter: brightness(1.02);
+        }
+        .stButton > button[kind="primary"]:active, .stFormSubmitButton > button[kind="primary"]:active {
+            box-shadow: 0 6px 14px rgba(190, 24, 93, 0.22), 0 2px 5px rgba(15, 23, 42, 0.12) !important;
+            transform: translateY(1px);
+            filter: brightness(0.98);
+        }
+        .character-guide {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            border-radius: 1rem;
+            background: #f8fafc;
+            border-left: 6px solid #5eead4;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+            cursor: default;
+        }
+        .character-placeholder {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #ccfbf1, #e0f2fe);
+            color: #0f766e;
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+        }
+        .character-guide-text { font-weight: 700; color: #164e63; }
         @media (max-width: 640px) {
             .block-container { padding-top: 4rem !important; padding-left: 1rem !important; padding-right: 1rem !important; }
             .app-title { line-height: 1.3; }
@@ -217,10 +256,24 @@ def page_header(page_title: str) -> None:
     st.markdown(f'<div class="page-title">{page_title}</div>', unsafe_allow_html=True)
 
 
+def character_guide(message: str) -> None:
+    import streamlit as st
+
+    with st.sidebar:
+        st.markdown("---")
+        st.markdown("### キャラクター表示エリア")
+        if CHARACTER_IMAGE_PATH.exists():
+            st.image(str(CHARACTER_IMAGE_PATH), caption="案内役キャラクター")
+        else:
+            st.markdown('<div class="character-placeholder">🌿</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="character-guide"><div class="character-guide-text">{message}</div></div>', unsafe_allow_html=True)
+
+
 def intro_page() -> None:
     import streamlit as st
 
     apply_design()
+    character_guide("まずは流れを確認しましょう")
     page_header("1. はじめに")
     st.markdown(
         '<div class="step-card">これからの資産がどのように変化しそうか、かんたんな条件で確認できる教育目的のシミュレーターです。</div>',
@@ -245,6 +298,7 @@ def input_page() -> None:
 
     set_default_inputs()
     apply_design()
+    character_guide("数字はざっくりでも大丈夫です")
     page_header("2. 条件を入力")
     st.caption("条件を入力して、次のページで結果を確認します。")
 
@@ -301,6 +355,7 @@ def result_page() -> None:
 
     set_default_inputs()
     apply_design()
+    character_guide("結果を一緒に確認してみましょう")
     page_header("3. 結果")
     st.caption("入力条件にもとづく概算結果です。")
 
