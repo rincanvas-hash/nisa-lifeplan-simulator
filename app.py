@@ -129,7 +129,7 @@ def apply_design() -> None:
     st.markdown(
         """
         <style>
-        html, body, .stApp { max-width: 100%; overflow-x: clip; }
+        html, body, .stApp { max-width: 100%; overflow-x: clip !important; }
         .stApp { background: linear-gradient(180deg, #f5fbff 0%, #ffffff 45%); }
         h1, h2, h3 { color: #164e63; max-width: 100%; white-space: normal; overflow-wrap: anywhere; word-break: normal; }
         p, label, div, span { font-size: 1.05rem; line-height: 1.7; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
@@ -167,14 +167,41 @@ def apply_design() -> None:
             word-break: normal;
         }
         [data-testid="stMetricValue"] { color: #0f766e; font-size: clamp(1.35rem, 4.8vw, 1.75rem); }
-        .block-container { max-width: 980px; padding-top: 2rem; padding-bottom: 3rem; overflow-x: clip; }
-        .notice { padding: 1rem; border-radius: 0.9rem; background: #ecfeff; border: 1px solid #a5f3fc; margin: 0.75rem 0; }
-        .warning { padding: 1rem; border-radius: 0.9rem; background: #fff7ed; border: 1px solid #fed7aa; margin: 0.75rem 0; }
-        .step-card { padding: 1.1rem; border-radius: 1rem; background: #ffffff; border: 1px solid #dbeafe; box-shadow: 0 1px 6px rgba(15, 76, 117, 0.08); }
+        .block-container { max-width: 980px; padding-top: 5rem !important; padding-bottom: 2rem !important; overflow-x: clip !important; }
+        .notice, .step-card {
+            padding: 1rem 1rem 1rem 1.15rem;
+            border-radius: 0.75rem;
+            background: #f0fdfa;
+            border: 0;
+            border-left: 6px solid #67e8f9;
+            box-shadow: none;
+            margin: 0.75rem 0;
+            cursor: default;
+        }
+        .warning {
+            padding: 1rem 1rem 1rem 1.15rem;
+            border-radius: 0.75rem;
+            background: #fff7ed;
+            border: 0;
+            border-left: 6px solid #fdba74;
+            box-shadow: none;
+            margin: 0.75rem 0;
+            cursor: default;
+        }
+        .page-bottom-space { height: 100px; }
+        .stButton > button[kind="primary"], .stFormSubmitButton > button[kind="primary"] {
+            min-height: 62px !important;
+            width: 100% !important;
+            font-size: 1.2rem !important;
+            font-weight: 800 !important;
+            margin: 1.3rem 0 1.6rem !important;
+            border-radius: 0.9rem !important;
+        }
         @media (max-width: 640px) {
-            .block-container { padding-left: 1rem; padding-right: 1rem; }
+            .block-container { padding-top: 4rem !important; padding-left: 1rem !important; padding-right: 1rem !important; }
             .app-title { line-height: 1.3; }
             .page-title { line-height: 1.35; }
+            .page-bottom-space { height: 90px; }
         }
         </style>
         """,
@@ -208,7 +235,9 @@ def intro_page() -> None:
         unsafe_allow_html=True,
     )
     if st.button("シミュレーションを始める", type="primary", use_container_width=True):
-        st.switch_page(INPUT_PAGE)
+        with st.spinner("計算しています…"):
+            st.switch_page(INPUT_PAGE)
+    st.markdown('<div class="page-bottom-space"></div>', unsafe_allow_html=True)
 
 
 def input_page() -> None:
@@ -240,28 +269,30 @@ def input_page() -> None:
         submitted = st.form_submit_button("結果を見る", type="primary", use_container_width=True)
 
     if submitted:
-        try:
-            current_assets = parse_yen_input(current_assets_text)
-            monthly_contribution = parse_yen_input(monthly_contribution_text)
-            monthly_living_expenses = parse_yen_input(monthly_living_expenses_text)
-            monthly_pension_income = parse_yen_input(monthly_pension_income_text)
-            simulate_assets(current_age, current_assets, monthly_contribution, annual_return_percent, retirement_age, monthly_living_expenses, monthly_pension_income, final_age)
-        except ValueError as error:
-            st.error(str(error))
-            st.stop()
+        with st.spinner("計算しています…"):
+            try:
+                current_assets = parse_yen_input(current_assets_text)
+                monthly_contribution = parse_yen_input(monthly_contribution_text)
+                monthly_living_expenses = parse_yen_input(monthly_living_expenses_text)
+                monthly_pension_income = parse_yen_input(monthly_pension_income_text)
+                simulate_assets(current_age, current_assets, monthly_contribution, annual_return_percent, retirement_age, monthly_living_expenses, monthly_pension_income, final_age)
+            except ValueError as error:
+                st.error(str(error))
+                st.stop()
 
-        st.session_state.current_age = current_age
-        st.session_state.current_assets_text = yen(current_assets)
-        st.session_state.monthly_contribution_text = yen(monthly_contribution)
-        st.session_state.annual_return_percent = annual_return_percent
-        st.session_state.retirement_age = retirement_age
-        st.session_state.monthly_living_expenses_text = yen(monthly_living_expenses)
-        st.session_state.monthly_pension_income_text = yen(monthly_pension_income)
-        st.session_state.final_age = final_age
-        st.switch_page(RESULT_PAGE)
+            st.session_state.current_age = current_age
+            st.session_state.current_assets_text = yen(current_assets)
+            st.session_state.monthly_contribution_text = yen(monthly_contribution)
+            st.session_state.annual_return_percent = annual_return_percent
+            st.session_state.retirement_age = retirement_age
+            st.session_state.monthly_living_expenses_text = yen(monthly_living_expenses)
+            st.session_state.monthly_pension_income_text = yen(monthly_pension_income)
+            st.session_state.final_age = final_age
+            st.switch_page(RESULT_PAGE)
 
     if annual_return_percent >= 7:
         st.markdown('<div class="warning">想定利回りが高めです。将来の運用成果は変動するため、現実的な範囲で複数のケースを確認しましょう。</div>', unsafe_allow_html=True)
+    st.markdown('<div class="page-bottom-space"></div>', unsafe_allow_html=True)
 
 
 def result_page() -> None:
