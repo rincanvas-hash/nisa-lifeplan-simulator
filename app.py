@@ -1,13 +1,18 @@
 """50代からの未来設計シミュレーター."""
 from __future__ import annotations
 
+from base64 import b64encode
 from dataclasses import dataclass
 from pathlib import Path
 
 
 APP_NAME = "50代からの未来設計シミュレーター"
 APP_SUBTITLE = "老後資金の見通しを、数字でやさしく確認"
-CHARACTER_IMAGE_PATH = Path("assets/guide_character.png")
+PAGE_GUIDES = {
+    "intro": {"image": Path("guide_intro.png"), "message": "まずは流れを確認しましょう"},
+    "input": {"image": Path("guide_input.png"), "message": "数字はざっくりでも大丈夫です"},
+    "result": {"image": Path("guide_result.png"), "message": "結果を一緒に確認してみましょう"},
+}
 
 
 @dataclass(frozen=True)
@@ -216,26 +221,51 @@ def apply_design() -> None:
         }
         .character-guide {
             margin-top: 1.5rem;
-            padding: 1rem;
-            border-radius: 1rem;
-            background: #f8fafc;
-            border-left: 6px solid #5eead4;
-            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
-            cursor: default;
-        }
-        .character-placeholder {
-            width: 72px;
-            height: 72px;
-            border-radius: 50%;
             display: flex;
+            flex-direction: column;
             align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, #ccfbf1, #e0f2fe);
-            color: #0f766e;
-            font-size: 2rem;
-            margin-bottom: 0.75rem;
+            gap: 0.95rem;
         }
-        .character-guide-text { font-weight: 700; color: #164e63; }
+        .character-speech {
+            position: relative;
+            width: 100%;
+            padding: 0.9rem 1rem;
+            border-radius: 1rem;
+            background: #ffffff;
+            border: 2px solid #99f6e4;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+            color: #164e63;
+            font-weight: 800;
+            line-height: 1.6;
+            text-align: center;
+        }
+        .character-speech::before {
+            content: "";
+            position: absolute;
+            left: 50%;
+            bottom: -15px;
+            transform: translateX(-50%);
+            border-width: 15px 12px 0 12px;
+            border-style: solid;
+            border-color: #99f6e4 transparent transparent transparent;
+        }
+        .character-speech::after {
+            content: "";
+            position: absolute;
+            left: 50%;
+            bottom: -11px;
+            transform: translateX(-50%);
+            border-width: 12px 10px 0 10px;
+            border-style: solid;
+            border-color: #ffffff transparent transparent transparent;
+        }
+        .character-image {
+            display: block;
+            width: 80%;
+            max-width: 260px;
+            height: auto;
+            margin: 0 auto;
+        }
         @media (max-width: 640px) {
             .block-container { padding-top: 4rem !important; padding-left: 1rem !important; padding-right: 1rem !important; }
             .app-title { line-height: 1.3; }
@@ -256,24 +286,36 @@ def page_header(page_title: str) -> None:
     st.markdown(f'<div class="page-title">{page_title}</div>', unsafe_allow_html=True)
 
 
-def character_guide(message: str) -> None:
+def image_data_uri(image_path: Path) -> str:
+    """Return a browser-displayable data URI for a local PNG image."""
+    return f"data:image/png;base64,{b64encode(image_path.read_bytes()).decode('ascii')}"
+
+
+def character_guide(page_key: str) -> None:
     import streamlit as st
 
-    with st.sidebar:
-        st.markdown("---")
-        st.markdown("### キャラクター表示エリア")
-        if CHARACTER_IMAGE_PATH.exists():
-            st.image(str(CHARACTER_IMAGE_PATH), caption="案内役キャラクター")
-        else:
-            st.markdown('<div class="character-placeholder">🌿</div>', unsafe_allow_html=True)
-        st.markdown(f'<div class="character-guide"><div class="character-guide-text">{message}</div></div>', unsafe_allow_html=True)
+    guide = PAGE_GUIDES[page_key]
+    image_path = guide["image"]
+    if not image_path.exists():
+        st.sidebar.error(f"案内役画像が見つかりません: {image_path}")
+        return
+
+    st.sidebar.markdown(
+        f"""
+        <div class="character-guide">
+            <div class="character-speech">{guide["message"]}</div>
+            <img class="character-image" src="{image_data_uri(image_path)}" alt="案内役キャラクター">
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def intro_page() -> None:
     import streamlit as st
 
     apply_design()
-    character_guide("まずは流れを確認しましょう")
+    character_guide("intro")
     page_header("1. はじめに")
     st.markdown(
         '<div class="step-card">これからの資産がどのように変化しそうか、かんたんな条件で確認できる教育目的のシミュレーターです。</div>',
@@ -298,7 +340,7 @@ def input_page() -> None:
 
     set_default_inputs()
     apply_design()
-    character_guide("数字はざっくりでも大丈夫です")
+    character_guide("input")
     page_header("2. 条件を入力")
     st.caption("条件を入力して、次のページで結果を確認します。")
 
@@ -355,7 +397,7 @@ def result_page() -> None:
 
     set_default_inputs()
     apply_design()
-    character_guide("結果を一緒に確認してみましょう")
+    character_guide("result")
     page_header("3. 結果")
     st.caption("入力条件にもとづく概算結果です。")
 
