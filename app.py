@@ -1,8 +1,11 @@
-"""50代からの老後資金かんたんシミュレーター."""
+"""50代からの未来設計シミュレーター."""
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
+
+APP_DIR = Path(__file__).parent
 
 
 @dataclass(frozen=True)
@@ -19,6 +22,11 @@ def yen(value: float) -> str:
     return f"{round(value):,}円"
 
 
+def man_yen_to_yen(value: float) -> int:
+    """Convert an amount expressed in ten-thousand yen to yen."""
+    return round(value * 10_000)
+
+
 def simulate_assets(
     current_age: int,
     current_assets: float,
@@ -29,12 +37,7 @@ def simulate_assets(
     monthly_pension_income: float,
     final_age: int,
 ) -> SimulationResult:
-    """Calculate projected asset balances by age for the MVP simulator.
-
-    The model applies the selected annual return once per age and then applies
-    either annual contributions before retirement or annual withdrawals after
-    retirement. Balances are floored at zero for display and downstream results.
-    """
+    """Calculate projected asset balances by age."""
     if current_age > final_age:
         raise ValueError("現在の年齢はシミュレーション終了年齢以下にしてください。")
     if retirement_age < current_age:
@@ -49,7 +52,6 @@ def simulate_assets(
     annual_contribution = max(float(monthly_contribution), 0.0) * 12
     monthly_shortfall = max(float(monthly_living_expenses) - float(monthly_pension_income), 0.0)
     annual_shortfall = monthly_shortfall * 12
-
     annual_rows: list[dict[str, int | float]] = []
     assets_at_retirement: float | None = assets if current_age >= retirement_age else None
     depletion_age: int | None = None
@@ -57,19 +59,16 @@ def simulate_assets(
     for age in range(current_age, final_age + 1):
         if assets > 0:
             assets *= 1 + annual_return_rate
-
         if age < retirement_age:
             assets += annual_contribution
         else:
             if assets_at_retirement is None:
                 assets_at_retirement = assets
             assets -= annual_shortfall
-
         if assets <= 0:
             assets = 0.0
             if age >= retirement_age and depletion_age is None:
                 depletion_age = age
-
         annual_rows.append({"年齢": age, "資産残高": round(assets)})
 
     return SimulationResult(
@@ -81,73 +80,141 @@ def simulate_assets(
     )
 
 
+DEFAULTS = {
+    "page": 1,
+    "current_age": 55,
+    "current_assets_man": 1000,
+    "monthly_contribution_man": 5,
+    "annual_return_percent": 3.0,
+    "retirement_age": 65,
+    "monthly_living_expenses_man": 28,
+    "monthly_pension_income_man": 18,
+    "final_age": 95,
+}
+
+
 def main() -> None:
     import pandas as pd
     import streamlit as st
 
-    st.set_page_config(
-        page_title="50代からの老後資金かんたんシミュレーター",
-        page_icon="🌿",
-        layout="wide",
-    )
+    st.set_page_config(page_title="50代からの未来設計シミュレーター", page_icon="🌿", layout="wide")
+    for key, value in DEFAULTS.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
 
     st.markdown(
         """
         <style>
-        .stApp { background: linear-gradient(180deg, #f5fbff 0%, #ffffff 45%); }
-        h1, h2, h3 { color: #164e63; }
-        p, label, div, span { font-size: 1.04rem; }
-        [data-testid="stMetricValue"] { color: #0f766e; font-size: 1.8rem; }
-        .notice { padding: 1rem; border-radius: 0.9rem; background: #ecfeff; border: 1px solid #a5f3fc; }
-        .warning { padding: 1rem; border-radius: 0.9rem; background: #fff7ed; border: 1px solid #fed7aa; }
+        .stApp { background: linear-gradient(155deg, #f1fbf6 0%, #fffdf7 55%, #eef8ff 100%); }
+        .block-container { max-width: 1120px; padding-top: 2rem; }
+        h1, h2, h3 { color: #174c42; }
+        .step { color:#39796c; font-weight:700; letter-spacing:.08em; }
+        .bubble { position:relative; padding:1.1rem 1.25rem; border-radius:1.2rem;
+          background:white; border:2px solid #b9e0d3; box-shadow:0 5px 16px #174c421c; }
+        .bubble:before { content:""; position:absolute; left:-14px; top:36px; border-width:10px 14px 10px 0;
+          border-style:solid; border-color:transparent #b9e0d3 transparent transparent; }
+        .guide img { max-height:245px; object-fit:contain; }
+        [data-testid="stMetric"] { background:#fff; border:1px solid #d9ebe5; padding:1rem; border-radius:1rem; box-shadow:0 4px 12px #174c4212; }
+        [data-testid="stMetricValue"] { color:#087f68; }
+        .stButton > button { border:0; border-radius:999px; font-weight:700; padding:.7rem 1.5rem;
+          background:linear-gradient(#35ad88,#148067); color:white; box-shadow:0 6px 0 #0d5d4c,0 10px 18px #174c4233; }
+        .stButton > button:active { transform:translateY(4px); box-shadow:0 2px 0 #0d5d4c; }
+        .yen-note { color:#526b65; font-size:.9rem; margin-top:-.65rem; margin-bottom:.5rem; }
+        @media(max-width: 700px) {
+          .block-container { padding:1rem .9rem 2rem; } h1 { font-size:1.75rem!important; }
+          .guide img { max-height:165px; } .bubble:before { display:none; }
+          [data-testid="stHorizontalBlock"] { gap:.5rem; }
+        }
         </style>
         """,
         unsafe_allow_html=True,
     )
+    st.title("50代からの未来設計シミュレーター")
+    st.progress(st.session_state.page / 3, text=f"STEP {st.session_state.page} / 3")
 
-    st.title("50代からの老後資金かんたんシミュレーター")
-    st.markdown(
-        '<div class="notice">現在の資産や毎月の積立額、年金見込み額を入力すると、将来の資産残高の目安を確認できます。入力内容は保存されません。</div>',
-        unsafe_allow_html=True,
+    if st.session_state.page == 1:
+        render_intro(st)
+    elif st.session_state.page == 2:
+        render_input(st)
+    else:
+        render_result(st, pd)
+
+
+def guide(st, image_name: str, message: str) -> None:
+    """Render the responsive guide character and speech bubble."""
+    image_col, message_col = st.columns([1, 2.3], vertical_alignment="center")
+    with image_col:
+        st.markdown('<div class="guide">', unsafe_allow_html=True)
+        st.image(str(APP_DIR / image_name), use_container_width=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+    with message_col:
+        st.markdown(f'<div class="bubble">{message}</div>', unsafe_allow_html=True)
+
+
+def go_to(st, page: int) -> None:
+    st.session_state.page = page
+
+
+def render_intro(st) -> None:
+    st.markdown('<div class="step">STEP 1　はじめに</div>', unsafe_allow_html=True)
+    guide(st, "guide_intro.png", "こんにちは！ これからの暮らしと資産を、3つのステップで一緒に見通してみましょう。")
+    st.subheader("未来のお金を、わかりやすく見える化")
+    st.write("今の資産や積立、退職後の生活費などを入力すると、年齢ごとの資産推移を概算します。入力内容はこのブラウザの操作中だけ保持されます。")
+    st.caption("教育目的の概算であり、金融助言や将来の成果を保証するものではありません。")
+    st.button("入力をはじめる →", type="primary", use_container_width=True, on_click=go_to, args=(st, 2))
+
+
+def money_input(st, label: str, key: str, maximum: int, help_text: str) -> None:
+    st.number_input(label, min_value=0, max_value=maximum, step=1, key=key, help=help_text)
+    st.markdown(f'<div class="yen-note">円換算：{yen(man_yen_to_yen(st.session_state[key]))}</div>', unsafe_allow_html=True)
+
+
+def render_input(st) -> None:
+    st.markdown('<div class="step">STEP 2　条件を入力</div>', unsafe_allow_html=True)
+    guide(st, "guide_input.png", "金額はすべて「万円」単位です。＋／－ボタンでも気軽に調整できますよ。")
+    left, right = st.columns(2)
+    with left:
+        st.number_input("現在の年齢", 50, 80, key="current_age")
+        money_input(st, "現在の金融資産（万円）", "current_assets_man", 50_000, "預貯金や投資信託などの合計")
+        money_input(st, "退職前の毎月の積立額（万円）", "monthly_contribution_man", 100, "退職まで毎月積み立てる金額")
+        st.number_input("想定する年利（%）", -10.0, 20.0, step=0.5, key="annual_return_percent")
+    with right:
+        st.number_input("退職予定年齢", min_value=st.session_state.current_age, max_value=90, key="retirement_age")
+        money_input(st, "退職後の毎月の生活費（万円）", "monthly_living_expenses_man", 200, "住居費、食費、医療費など")
+        money_input(st, "退職後の毎月の年金収入（万円）", "monthly_pension_income_man", 200, "公的年金などの見込み額")
+        st.number_input("シミュレーション終了年齢", min_value=st.session_state.retirement_age, max_value=110, key="final_age")
+    back, forward = st.columns(2)
+    back.button("← 戻る", use_container_width=True, on_click=go_to, args=(st, 1))
+    forward.button("結果を見る →", type="primary", use_container_width=True, on_click=go_to, args=(st, 3))
+
+
+def render_result(st, pd) -> None:
+    st.markdown('<div class="step">STEP 3　シミュレーション結果</div>', unsafe_allow_html=True)
+    guide(st, "guide_result.png", "結果が出ました！ 4つのポイントとグラフを見ながら、無理のない未来設計を考えましょう。")
+    result = simulate_assets(
+        st.session_state.current_age,
+        man_yen_to_yen(st.session_state.current_assets_man),
+        man_yen_to_yen(st.session_state.monthly_contribution_man),
+        st.session_state.annual_return_percent,
+        st.session_state.retirement_age,
+        man_yen_to_yen(st.session_state.monthly_living_expenses_man),
+        man_yen_to_yen(st.session_state.monthly_pension_income_man),
+        st.session_state.final_age,
     )
-    st.caption("このシミュレーターは教育目的の概算です。金融助言ではなく、結果を保証するものではありません。")
-
-    with st.sidebar:
-        st.header("入力してください")
-        current_age = st.number_input("現在の年齢", 50, 80, 55, help="今日時点のおおよその年齢を入力してください。")
-        current_assets = st.number_input("現在の金融資産（円）", 0, 500_000_000, 10_000_000, step=500_000, help="預貯金や投資信託など、老後資金として考える資産の合計です。")
-        monthly_contribution = st.number_input("退職前の毎月の積立額（円）", 0, 1_000_000, 50_000, step=10_000, help="退職するまで毎月追加できそうな金額です。")
-        annual_return_percent = st.number_input("想定する年利（%）", -10.0, 20.0, 3.0, step=0.5, help="資産運用で期待する1年あたりの増減率です。高すぎる設定に注意してください。")
-        retirement_age = st.number_input("退職予定年齢", current_age, 90, 65, help="積立をやめ、老後生活費を取り崩し始める年齢です。")
-        monthly_living_expenses = st.number_input("退職後の毎月の生活費（円）", 0, 2_000_000, 280_000, step=10_000, help="住居費、食費、医療費、趣味などを含めた毎月の支出見込みです。")
-        monthly_pension_income = st.number_input("退職後の毎月の年金収入（円）", 0, 2_000_000, 180_000, step=10_000, help="公的年金など、退職後に毎月受け取る見込み額です。")
-        final_age = st.number_input("シミュレーション終了年齢", retirement_age, 110, max(95, retirement_age), help="退職予定年齢以降で、何歳まで資産推移を確認するかを選びます。")
-
-    if annual_return_percent >= 7:
-        st.markdown('<div class="warning">想定利回りが高めです。将来の運用成果は変動するため、現実的な範囲で複数のケースを確認しましょう。</div>', unsafe_allow_html=True)
-
-    try:
-        result = simulate_assets(current_age, current_assets, monthly_contribution, annual_return_percent, retirement_age, monthly_living_expenses, monthly_pension_income, final_age)
-    except ValueError as error:
-        st.error(str(error))
-        st.stop()
-
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("退職時の推定資産", yen(result.assets_at_retirement))
-    col2.metric("退職後の毎月不足額", yen(result.monthly_shortfall))
-    col3.metric("資産がなくなる推定年齢", f"{result.depletion_age}歳" if result.depletion_age else "期間内は残る")
-    col4.metric("終了年齢での推定資産", yen(result.final_assets))
-
+    columns = st.columns(4)
+    columns[0].metric("退職時の推定資産", yen(result.assets_at_retirement))
+    columns[1].metric("退職後の毎月不足額", yen(result.monthly_shortfall))
+    columns[2].metric("資産がなくなる推定年齢", f"{result.depletion_age}歳" if result.depletion_age else "期間内は残る")
+    columns[3].metric("終了年齢での推定資産", yen(result.final_assets))
     df = pd.DataFrame(result.annual_rows)
-    st.subheader("年齢ごとの資産残高")
+    st.subheader("資産推移グラフ")
     st.line_chart(df.set_index("年齢"), height=360)
-
-    st.subheader("かんたん年間結果表")
+    st.subheader("年間結果表")
     display_df = df.copy()
     display_df["資産残高"] = display_df["資産残高"].map(yen)
     st.dataframe(display_df, use_container_width=True, hide_index=True)
-
-    st.info("注意：税金、社会保険料、物価上昇、退職金、夫婦での計算などは含めていません。実際の計画は専門家にも相談してください。")
+    st.caption("税金、社会保険料、物価上昇、退職金などは含みません。実際の計画は専門家にもご相談ください。")
+    st.button("← 条件を見直す", use_container_width=True, on_click=go_to, args=(st, 2))
 
 
 if __name__ == "__main__":
