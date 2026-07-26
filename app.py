@@ -203,15 +203,19 @@ def apply_design() -> None:
             filter: brightness(0.98);
         }
         .character-guide {
-            margin-top: 1.5rem;
+            margin: 0 0 1.25rem;
             display: flex;
-            flex-direction: column;
+            flex-direction: row;
             align-items: center;
-            gap: 0.95rem;
+            justify-content: flex-start;
+            gap: 1rem;
+            max-width: 100%;
         }
         .character-speech {
             position: relative;
-            width: 100%;
+            order: 2;
+            width: auto;
+            max-width: min(100%, 34rem);
             padding: 0.9rem 1rem;
             border-radius: 1rem;
             background: #ffffff;
@@ -225,34 +229,65 @@ def apply_design() -> None:
         .character-speech::before {
             content: "";
             position: absolute;
-            left: 50%;
-            bottom: -15px;
-            transform: translateX(-50%);
-            border-width: 15px 12px 0 12px;
+            left: -15px;
+            top: 50%;
+            transform: translateY(-50%);
+            border-width: 12px 15px 12px 0;
             border-style: solid;
-            border-color: #99f6e4 transparent transparent transparent;
+            border-color: transparent #99f6e4 transparent transparent;
         }
         .character-speech::after {
             content: "";
             position: absolute;
-            left: 50%;
-            bottom: -11px;
-            transform: translateX(-50%);
-            border-width: 12px 10px 0 10px;
+            left: -11px;
+            top: 50%;
+            transform: translateY(-50%);
+            border-width: 10px 12px 10px 0;
             border-style: solid;
-            border-color: #ffffff transparent transparent transparent;
+            border-color: transparent #ffffff transparent transparent;
         }
         .character-image {
             display: block;
-            width: 80%;
-            max-width: 260px;
+            order: 1;
+            width: clamp(120px, 15vw, 150px);
+            max-width: 100%;
             height: auto;
-            margin: 0 auto;
+            flex: 0 0 auto;
         }
         @media (max-width: 640px) {
             .block-container { padding-top: 4rem !important; padding-left: 1rem !important; padding-right: 1rem !important; }
             .app-title { line-height: 1.3; }
             .page-title { line-height: 1.35; }
+            .character-guide {
+                flex-direction: column;
+                gap: 0.75rem;
+                margin-bottom: 1rem;
+            }
+            .character-speech {
+                order: 1;
+                width: 100%;
+            }
+            .character-speech::before {
+                left: 50%;
+                top: auto;
+                bottom: -15px;
+                transform: translateX(-50%);
+                border-width: 15px 12px 0 12px;
+                border-color: #99f6e4 transparent transparent transparent;
+            }
+            .character-speech::after {
+                left: 50%;
+                top: auto;
+                bottom: -11px;
+                transform: translateX(-50%);
+                border-width: 12px 10px 0 10px;
+                border-color: #ffffff transparent transparent transparent;
+            }
+            .character-image {
+                order: 2;
+                width: clamp(120px, 36vw, 140px);
+                margin: 0 auto;
+            }
             .page-bottom-space { height: 90px; }
         }
         </style>
@@ -280,10 +315,10 @@ def character_guide(page_key: str) -> None:
     guide = PAGE_GUIDES[page_key]
     image_path = guide["image"]
     if not image_path.exists():
-        st.sidebar.error(f"案内役画像が見つかりません: {image_path}")
+        st.error(f"案内役画像が見つかりません: {image_path}")
         return
 
-    st.sidebar.markdown(
+    st.markdown(
         f"""
         <div class="character-guide">
             <div class="character-speech">{guide["message"]}</div>
@@ -298,8 +333,8 @@ def intro_page() -> None:
     import streamlit as st
 
     apply_design()
-    character_guide("intro")
     page_header("1. はじめに")
+    character_guide("intro")
     st.markdown(
         '<div class="step-card">これからの資産がどのように変化しそうか、かんたんな条件で確認できる教育目的のシミュレーターです。</div>',
         unsafe_allow_html=True,
@@ -323,8 +358,8 @@ def input_page() -> None:
 
     set_default_inputs()
     apply_design()
-    character_guide("input")
     page_header("2. 条件を入力")
+    character_guide("input")
     st.caption("条件を入力して、次のページで結果を確認します。")
 
     with st.form("input_form"):
@@ -384,8 +419,8 @@ def result_page() -> None:
 
     set_default_inputs()
     apply_design()
-    character_guide("result")
     page_header("3. 結果")
+    character_guide("result")
     st.caption("入力条件にもとづく概算結果です。")
 
     try:
