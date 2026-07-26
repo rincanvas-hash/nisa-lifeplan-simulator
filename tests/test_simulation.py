@@ -1,6 +1,6 @@
 import pytest
 
-from app import simulate_assets, yen
+from app import man_yen_to_yen, simulate_assets, yen
 
 
 def test_simulation_before_and_after_retirement():
@@ -42,3 +42,8 @@ def test_final_age_must_be_retirement_age_or_later():
 
 def test_yen_format():
     assert yen(1234567) == "1,234,567円"
+
+
+def test_man_yen_conversion():
+    assert man_yen_to_yen(28) == 280_000
+    assert man_yen_to_yen(0.5) == 5_000
