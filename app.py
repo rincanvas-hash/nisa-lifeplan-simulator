@@ -29,26 +29,9 @@ def yen(value: float) -> str:
     return f"{round(value):,}円"
 
 
-def parse_yen_input(value: str) -> int:
-    """Convert a Japanese yen text input into an integer amount.
-
-    Commas, regular spaces, full-width spaces, and the yen symbol are accepted.
-    Empty input is treated as zero. Other characters raise a Japanese error.
-    """
-    cleaned = (
-        str(value)
-        .replace(",", "")
-        .replace("円", "")
-        .replace("¥", "")
-        .replace(" ", "")
-        .replace("　", "")
-    )
-
-    if cleaned == "":
-        return 0
-    if not cleaned.isdigit():
-        raise ValueError("金額は数字、カンマ、空白、円記号だけで入力してください。")
-    return int(cleaned)
+def man_yen_to_yen(value: int | float) -> int:
+    """Convert an amount expressed in ten-thousand yen units to yen."""
+    return round(value * 10_000)
 
 
 def simulate_assets(
@@ -118,12 +101,12 @@ def set_default_inputs() -> None:
 
     defaults = {
         "current_age": 55,
-        "current_assets_text": yen(10_000_000),
-        "monthly_contribution_text": yen(50_000),
+        "current_assets_man_yen": 1_000,
+        "monthly_contribution_man_yen": 5,
         "annual_return_percent": 3.0,
         "retirement_age": 65,
-        "monthly_living_expenses_text": yen(280_000),
-        "monthly_pension_income_text": yen(180_000),
+        "monthly_living_expenses_man_yen": 28,
+        "monthly_pension_income_man_yen": 18,
         "final_age": 95,
     }
     for key, value in defaults.items():
@@ -356,33 +339,37 @@ def input_page() -> None:
         st.markdown("### 金額")
         money_col1, money_col2 = st.columns(2)
         with money_col1:
-            current_assets_text = st.text_input("現在の金融資産（円）", st.session_state.current_assets_text, help="例：10,000,000円。預貯金や投資信託など、老後資金として考える資産の合計です。")
-            monthly_contribution_text = st.text_input("退職前の毎月の積立額（円）", st.session_state.monthly_contribution_text, help="例：50,000円。退職するまで毎月追加できそうな金額です。")
+            current_assets_man_yen = st.number_input("現在の金融資産（万円）", min_value=0, value=st.session_state.current_assets_man_yen, step=50, format="%d", help="預貯金や投資信託など、老後資金として考える資産の合計です。")
+            st.caption(f"円換算：{yen(man_yen_to_yen(current_assets_man_yen))}")
+            monthly_contribution_man_yen = st.number_input("退職前の毎月の積立額（万円）", min_value=0, value=st.session_state.monthly_contribution_man_yen, step=1, format="%d", help="退職するまで毎月追加できそうな金額です。")
+            st.caption(f"円換算：{yen(man_yen_to_yen(monthly_contribution_man_yen))}")
         with money_col2:
-            monthly_living_expenses_text = st.text_input("退職後の毎月の生活費（円）", st.session_state.monthly_living_expenses_text, help="例：280,000円。住居費、食費、医療費、趣味などを含めた毎月の支出見込みです。")
-            monthly_pension_income_text = st.text_input("退職後の毎月の年金収入（円）", st.session_state.monthly_pension_income_text, help="例：180,000円。公的年金など、退職後に毎月受け取る見込み額です。")
+            monthly_living_expenses_man_yen = st.number_input("退職後の毎月の生活費（万円）", min_value=0, value=st.session_state.monthly_living_expenses_man_yen, step=1, format="%d", help="住居費、食費、医療費、趣味などを含めた毎月の支出見込みです。")
+            st.caption(f"円換算：{yen(man_yen_to_yen(monthly_living_expenses_man_yen))}")
+            monthly_pension_income_man_yen = st.number_input("退職後の毎月の年金収入（万円）", min_value=0, value=st.session_state.monthly_pension_income_man_yen, step=1, format="%d", help="公的年金など、退職後に毎月受け取る見込み額です。")
+            st.caption(f"円換算：{yen(man_yen_to_yen(monthly_pension_income_man_yen))}")
 
         submitted = st.form_submit_button("結果を見る", type="primary", use_container_width=True)
 
     if submitted:
         with st.spinner("計算しています…"):
             try:
-                current_assets = parse_yen_input(current_assets_text)
-                monthly_contribution = parse_yen_input(monthly_contribution_text)
-                monthly_living_expenses = parse_yen_input(monthly_living_expenses_text)
-                monthly_pension_income = parse_yen_input(monthly_pension_income_text)
+                current_assets = man_yen_to_yen(current_assets_man_yen)
+                monthly_contribution = man_yen_to_yen(monthly_contribution_man_yen)
+                monthly_living_expenses = man_yen_to_yen(monthly_living_expenses_man_yen)
+                monthly_pension_income = man_yen_to_yen(monthly_pension_income_man_yen)
                 simulate_assets(current_age, current_assets, monthly_contribution, annual_return_percent, retirement_age, monthly_living_expenses, monthly_pension_income, final_age)
             except ValueError as error:
                 st.error(str(error))
                 st.stop()
 
             st.session_state.current_age = current_age
-            st.session_state.current_assets_text = yen(current_assets)
-            st.session_state.monthly_contribution_text = yen(monthly_contribution)
+            st.session_state.current_assets_man_yen = current_assets_man_yen
+            st.session_state.monthly_contribution_man_yen = monthly_contribution_man_yen
             st.session_state.annual_return_percent = annual_return_percent
             st.session_state.retirement_age = retirement_age
-            st.session_state.monthly_living_expenses_text = yen(monthly_living_expenses)
-            st.session_state.monthly_pension_income_text = yen(monthly_pension_income)
+            st.session_state.monthly_living_expenses_man_yen = monthly_living_expenses_man_yen
+            st.session_state.monthly_pension_income_man_yen = monthly_pension_income_man_yen
             st.session_state.final_age = final_age
             st.switch_page(RESULT_PAGE)
 
@@ -402,10 +389,10 @@ def result_page() -> None:
     st.caption("入力条件にもとづく概算結果です。")
 
     try:
-        current_assets = parse_yen_input(st.session_state.current_assets_text)
-        monthly_contribution = parse_yen_input(st.session_state.monthly_contribution_text)
-        monthly_living_expenses = parse_yen_input(st.session_state.monthly_living_expenses_text)
-        monthly_pension_income = parse_yen_input(st.session_state.monthly_pension_income_text)
+        current_assets = man_yen_to_yen(st.session_state.current_assets_man_yen)
+        monthly_contribution = man_yen_to_yen(st.session_state.monthly_contribution_man_yen)
+        monthly_living_expenses = man_yen_to_yen(st.session_state.monthly_living_expenses_man_yen)
+        monthly_pension_income = man_yen_to_yen(st.session_state.monthly_pension_income_man_yen)
         result = simulate_assets(st.session_state.current_age, current_assets, monthly_contribution, st.session_state.annual_return_percent, st.session_state.retirement_age, monthly_living_expenses, monthly_pension_income, st.session_state.final_age)
     except ValueError as error:
         st.error(str(error))
