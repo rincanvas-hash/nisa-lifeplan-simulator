@@ -1,13 +1,19 @@
 """50代からの未来設計シミュレーター."""
 from __future__ import annotations
 
+from base64 import b64encode
 from dataclasses import dataclass
+from math import isfinite
 from pathlib import Path
 
 
 APP_NAME = "50代からの未来設計シミュレーター"
 APP_SUBTITLE = "老後資金の見通しを、数字でやさしく確認"
-CHARACTER_IMAGE_PATH = Path("assets/guide_character.png")
+PAGE_GUIDES = {
+    "intro": {"image": Path("guide_intro.png"), "message": "まずは流れを確認しましょう"},
+    "input": {"image": Path("guide_input.png"), "message": "数字はざっくりでも大丈夫です"},
+    "result": {"image": Path("guide_result.png"), "message": "結果を一緒に確認してみましょう"},
+}
 
 
 @dataclass(frozen=True)
@@ -22,6 +28,15 @@ class SimulationResult:
 def yen(value: float) -> str:
     """Format a number as Japanese yen."""
     return f"{round(value):,}円"
+
+
+def man_yen_to_yen(value: int | float) -> int:
+    """Convert a non-negative amount in ten-thousand yen units to yen."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError("金額は0以上の数字で入力してください。")
+    if not isfinite(value) or value < 0:
+        raise ValueError("金額は0以上の数字で入力してください。")
+    return round(value * 10_000)
 
 
 def parse_yen_input(value: str) -> int:
@@ -113,12 +128,12 @@ def set_default_inputs() -> None:
 
     defaults = {
         "current_age": 55,
-        "current_assets_text": yen(10_000_000),
-        "monthly_contribution_text": yen(50_000),
+        "current_assets_man": 1_000,
+        "monthly_contribution_man": 5,
         "annual_return_percent": 3.0,
         "retirement_age": 65,
-        "monthly_living_expenses_text": yen(280_000),
-        "monthly_pension_income_text": yen(180_000),
+        "monthly_living_expenses_man": 28,
+        "monthly_pension_income_man": 18,
         "final_age": 95,
     }
     for key, value in defaults.items():
@@ -216,31 +231,78 @@ def apply_design() -> None:
         }
         .character-guide {
             margin-top: 1.5rem;
-            padding: 1rem;
-            border-radius: 1rem;
-            background: #f8fafc;
-            border-left: 6px solid #5eead4;
-            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
-            cursor: default;
-        }
-        .character-placeholder {
-            width: 72px;
-            height: 72px;
-            border-radius: 50%;
             display: flex;
+            flex-direction: column;
             align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, #ccfbf1, #e0f2fe);
-            color: #0f766e;
-            font-size: 2rem;
-            margin-bottom: 0.75rem;
+            gap: 0.95rem;
         }
-        .character-guide-text { font-weight: 700; color: #164e63; }
+        .character-speech {
+            position: relative;
+            width: 100%;
+            padding: 0.9rem 1rem;
+            border-radius: 1rem;
+            background: #ffffff;
+            border: 2px solid #99f6e4;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+            color: #164e63;
+            font-weight: 800;
+            line-height: 1.6;
+            text-align: center;
+        }
+        .character-speech::before {
+            content: "";
+            position: absolute;
+            left: 50%;
+            bottom: -15px;
+            transform: translateX(-50%);
+            border-width: 15px 12px 0 12px;
+            border-style: solid;
+            border-color: #99f6e4 transparent transparent transparent;
+        }
+        .character-speech::after {
+            content: "";
+            position: absolute;
+            left: 50%;
+            bottom: -11px;
+            transform: translateX(-50%);
+            border-width: 12px 10px 0 10px;
+            border-style: solid;
+            border-color: #ffffff transparent transparent transparent;
+        }
+        .character-image {
+            display: block;
+            width: 80%;
+            max-width: 260px;
+            height: auto;
+            margin: 0 auto;
+        }
+        [data-testid="stNumberInput"] input {
+            min-height: 48px;
+            font-size: 1.1rem;
+        }
+        [data-testid="stNumberInput"] button {
+            min-width: 44px !important;
+            min-height: 44px !important;
+            opacity: 1 !important;
+            color: #164e63 !important;
+            background: #ecfeff !important;
+            border-color: #67e8f9 !important;
+        }
+        .yen-conversion {
+            color: #64748b;
+            font-size: 0.88rem;
+            line-height: 1.45;
+            margin: -0.55rem 0 0.85rem;
+        }
         @media (max-width: 640px) {
             .block-container { padding-top: 4rem !important; padding-left: 1rem !important; padding-right: 1rem !important; }
             .app-title { line-height: 1.3; }
             .page-title { line-height: 1.35; }
             .page-bottom-space { height: 90px; }
+            [data-testid="stNumberInput"] button {
+                min-width: 48px !important;
+                min-height: 48px !important;
+            }
         }
         </style>
         """,
@@ -256,24 +318,56 @@ def page_header(page_title: str) -> None:
     st.markdown(f'<div class="page-title">{page_title}</div>', unsafe_allow_html=True)
 
 
-def character_guide(message: str) -> None:
+def image_data_uri(image_path: Path) -> str:
+    """Return a browser-displayable data URI for a local PNG image."""
+    return f"data:image/png;base64,{b64encode(image_path.read_bytes()).decode('ascii')}"
+
+
+def character_guide(page_key: str) -> None:
     import streamlit as st
 
-    with st.sidebar:
-        st.markdown("---")
-        st.markdown("### キャラクター表示エリア")
-        if CHARACTER_IMAGE_PATH.exists():
-            st.image(str(CHARACTER_IMAGE_PATH), caption="案内役キャラクター")
-        else:
-            st.markdown('<div class="character-placeholder">🌿</div>', unsafe_allow_html=True)
-        st.markdown(f'<div class="character-guide"><div class="character-guide-text">{message}</div></div>', unsafe_allow_html=True)
+    guide = PAGE_GUIDES[page_key]
+    image_path = guide["image"]
+    if not image_path.exists():
+        st.sidebar.error(f"案内役画像が見つかりません: {image_path}")
+        return
+
+    st.sidebar.markdown(
+        f"""
+        <div class="character-guide">
+            <div class="character-speech">{guide["message"]}</div>
+            <img class="character-image" src="{image_data_uri(image_path)}" alt="案内役キャラクター">
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def money_input(label: str, key: str, maximum: int, step: int, help_text: str) -> int:
+    """Render an integer man-yen input and its live yen conversion."""
+    import streamlit as st
+
+    value = st.number_input(
+        label,
+        min_value=0,
+        max_value=maximum,
+        step=step,
+        key=key,
+        help=help_text,
+    )
+    yen_value = man_yen_to_yen(value)
+    st.markdown(
+        f'<div class="yen-conversion">{int(value):,}万円 ＝ {yen_value:,}円</div>',
+        unsafe_allow_html=True,
+    )
+    return int(value)
 
 
 def intro_page() -> None:
     import streamlit as st
 
     apply_design()
-    character_guide("まずは流れを確認しましょう")
+    character_guide("intro")
     page_header("1. はじめに")
     st.markdown(
         '<div class="step-card">これからの資産がどのように変化しそうか、かんたんな条件で確認できる教育目的のシミュレーターです。</div>',
@@ -298,49 +392,44 @@ def input_page() -> None:
 
     set_default_inputs()
     apply_design()
-    character_guide("数字はざっくりでも大丈夫です")
+    character_guide("input")
     page_header("2. 条件を入力")
     st.caption("条件を入力して、次のページで結果を確認します。")
 
-    with st.form("input_form"):
-        age_col1, age_col2 = st.columns(2)
-        with age_col1:
-            current_age = st.number_input("現在の年齢", 50, 80, st.session_state.current_age, help="今日時点のおおよその年齢を入力してください。")
-            retirement_age = st.number_input("退職予定年齢", current_age, 90, max(st.session_state.retirement_age, current_age), help="積立をやめ、老後生活費を取り崩し始める年齢です。")
-        with age_col2:
-            annual_return_percent = st.number_input("想定する年利（%）", -10.0, 20.0, st.session_state.annual_return_percent, step=0.5, help="資産運用で期待する1年あたりの増減率です。高すぎる設定に注意してください。")
-            final_age = st.number_input("シミュレーション終了年齢", retirement_age, 110, max(st.session_state.final_age, retirement_age), help="退職予定年齢以降で、何歳まで資産推移を確認するかを選びます。")
+    age_col1, age_col2 = st.columns(2)
+    with age_col1:
+        current_age = st.number_input("現在の年齢", 50, 80, st.session_state.current_age, help="今日時点のおおよその年齢を入力してください。")
+        retirement_age = st.number_input("退職予定年齢", current_age, 90, max(st.session_state.retirement_age, current_age), help="積立をやめ、老後生活費を取り崩し始める年齢です。")
+    with age_col2:
+        annual_return_percent = st.number_input("想定する年利（%）", -10.0, 20.0, st.session_state.annual_return_percent, step=0.5, help="資産運用で期待する1年あたりの増減率です。高すぎる設定に注意してください。")
+        final_age = st.number_input("シミュレーション終了年齢", retirement_age, 110, max(st.session_state.final_age, retirement_age), help="退職予定年齢以降で、何歳まで資産推移を確認するかを選びます。")
 
-        st.markdown("### 金額")
-        money_col1, money_col2 = st.columns(2)
-        with money_col1:
-            current_assets_text = st.text_input("現在の金融資産（円）", st.session_state.current_assets_text, help="例：10,000,000円。預貯金や投資信託など、老後資金として考える資産の合計です。")
-            monthly_contribution_text = st.text_input("退職前の毎月の積立額（円）", st.session_state.monthly_contribution_text, help="例：50,000円。退職するまで毎月追加できそうな金額です。")
-        with money_col2:
-            monthly_living_expenses_text = st.text_input("退職後の毎月の生活費（円）", st.session_state.monthly_living_expenses_text, help="例：280,000円。住居費、食費、医療費、趣味などを含めた毎月の支出見込みです。")
-            monthly_pension_income_text = st.text_input("退職後の毎月の年金収入（円）", st.session_state.monthly_pension_income_text, help="例：180,000円。公的年金など、退職後に毎月受け取る見込み額です。")
+    st.markdown("### 金額")
+    money_col1, money_col2 = st.columns(2)
+    with money_col1:
+        current_assets_man = money_input("現在の金融資産（万円）", "current_assets_man", 100_000, 50, "預貯金や投資信託など、老後資金として考える資産の合計です。")
+        monthly_contribution_man = money_input("退職前の毎月の積立額（万円）", "monthly_contribution_man", 100, 1, "退職するまで毎月追加できそうな金額です。")
+    with money_col2:
+        monthly_living_expenses_man = money_input("退職後の毎月の生活費（万円）", "monthly_living_expenses_man", 300, 1, "住居費、食費、医療費、趣味などを含めた毎月の支出見込みです。")
+        monthly_pension_income_man = money_input("退職後の毎月の年金収入（万円）", "monthly_pension_income_man", 300, 1, "公的年金など、退職後に毎月受け取る見込み額です。")
 
-        submitted = st.form_submit_button("結果を見る", type="primary", use_container_width=True)
+    submitted = st.button("結果を見る", type="primary", use_container_width=True)
 
     if submitted:
         with st.spinner("計算しています…"):
             try:
-                current_assets = parse_yen_input(current_assets_text)
-                monthly_contribution = parse_yen_input(monthly_contribution_text)
-                monthly_living_expenses = parse_yen_input(monthly_living_expenses_text)
-                monthly_pension_income = parse_yen_input(monthly_pension_income_text)
+                current_assets = man_yen_to_yen(current_assets_man)
+                monthly_contribution = man_yen_to_yen(monthly_contribution_man)
+                monthly_living_expenses = man_yen_to_yen(monthly_living_expenses_man)
+                monthly_pension_income = man_yen_to_yen(monthly_pension_income_man)
                 simulate_assets(current_age, current_assets, monthly_contribution, annual_return_percent, retirement_age, monthly_living_expenses, monthly_pension_income, final_age)
             except ValueError as error:
                 st.error(str(error))
                 st.stop()
 
             st.session_state.current_age = current_age
-            st.session_state.current_assets_text = yen(current_assets)
-            st.session_state.monthly_contribution_text = yen(monthly_contribution)
             st.session_state.annual_return_percent = annual_return_percent
             st.session_state.retirement_age = retirement_age
-            st.session_state.monthly_living_expenses_text = yen(monthly_living_expenses)
-            st.session_state.monthly_pension_income_text = yen(monthly_pension_income)
             st.session_state.final_age = final_age
             st.switch_page(RESULT_PAGE)
 
@@ -355,15 +444,15 @@ def result_page() -> None:
 
     set_default_inputs()
     apply_design()
-    character_guide("結果を一緒に確認してみましょう")
+    character_guide("result")
     page_header("3. 結果")
     st.caption("入力条件にもとづく概算結果です。")
 
     try:
-        current_assets = parse_yen_input(st.session_state.current_assets_text)
-        monthly_contribution = parse_yen_input(st.session_state.monthly_contribution_text)
-        monthly_living_expenses = parse_yen_input(st.session_state.monthly_living_expenses_text)
-        monthly_pension_income = parse_yen_input(st.session_state.monthly_pension_income_text)
+        current_assets = man_yen_to_yen(st.session_state.current_assets_man)
+        monthly_contribution = man_yen_to_yen(st.session_state.monthly_contribution_man)
+        monthly_living_expenses = man_yen_to_yen(st.session_state.monthly_living_expenses_man)
+        monthly_pension_income = man_yen_to_yen(st.session_state.monthly_pension_income_man)
         result = simulate_assets(st.session_state.current_age, current_assets, monthly_contribution, st.session_state.annual_return_percent, st.session_state.retirement_age, monthly_living_expenses, monthly_pension_income, st.session_state.final_age)
     except ValueError as error:
         st.error(str(error))

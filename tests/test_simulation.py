@@ -1,6 +1,6 @@
 import pytest
 
-from app import APP_NAME, APP_SUBTITLE, parse_yen_input, simulate_assets, yen
+from app import APP_NAME, APP_SUBTITLE, man_yen_to_yen, parse_yen_input, simulate_assets, yen
 
 
 def test_simulation_before_and_after_retirement():
@@ -42,6 +42,17 @@ def test_final_age_must_be_retirement_age_or_later():
 
 def test_yen_format():
     assert yen(1234567) == "1,234,567円"
+
+
+def test_man_yen_input_is_converted_to_yen():
+    assert man_yen_to_yen(1_000) == 10_000_000
+    assert man_yen_to_yen(5) == 50_000
+
+
+@pytest.mark.parametrize("invalid_value", [-1, float("nan"), float("inf"), "10", True])
+def test_man_yen_input_rejects_invalid_values(invalid_value):
+    with pytest.raises(ValueError, match="金額は0以上の数字"):
+        man_yen_to_yen(invalid_value)
 
 
 def test_parse_yen_input_accepts_commas_and_symbols():
